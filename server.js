@@ -264,9 +264,7 @@ server.on('request', (request, response) => {
 
 			for (let i = 0, len = posts_text.length; i < len; ++i){
 
-			    console.log(posts_text[i]);
-			    
-			    json_array.push({ "id" : (i+1), "text" : posts_text[i]});
+			    json_array.push({ "id" : (i+1), "text" : posts_text[len-i-1]});
 
 			}
 
