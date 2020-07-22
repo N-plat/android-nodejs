@@ -284,7 +284,6 @@ server.on('request', (request, response) => {
     }
 
 
-
     if (request.method === 'POST' && request.url === '/feed/'){
 	    
 	let body = [];
@@ -347,6 +346,128 @@ server.on('request', (request, response) => {
 		});
 	})
     }
+
+    if (request.method === 'POST' && request.url === '/followers/'){
+	    
+	let body = [];
+	request.on('data', (chunk) => {
+	    body.push(chunk);
+	}).on('end', () => {
+
+	    body = Buffer.concat(body).toString();
+	    const id_token = JSON.parse(decodeURIComponent(body))["id_token"];
+
+	    admin.auth().verifyIdToken(id_token)
+		.then(function(decodedToken) {
+		    var username = decodedToken.uid;
+
+		    var connection = mysql.createConnection({
+			host     : 'nplat-instance.cphov5mfizlt.us-west-2.rds.amazonaws.com',
+			user     : 'android',
+			password : mysql_db_password,
+			database : 'nplat',
+			port : '3306',
+		    });
+		    
+		    connection.connect();
+		    
+		    following_usernames = [];
+		    
+		    connection.query('select follower from follows where followed="'+username+'";',function (error, results, fields) {
+
+			for (let i = 0, len = results.length; i < len; ++i) {
+
+			    following_usernames.push(results[i]["follower"]);
+
+			}
+			
+		    });
+
+
+		    connection.end( function(error) {
+
+			json_array =[]
+
+			for (let i = 0, len = following_usernames.length; i < len; ++i){
+
+			    json_array.push({ "id" : (i+1), "username" : following_usernames[i]});
+
+			}
+
+			response.write(JSON.stringify(json_array));
+
+			response.end();	    
+		    
+		    });
+
+
+
+
+
+		});
+	})
+    }
+
+    if (request.method === 'POST' && request.url === '/following/'){
+	    
+	let body = [];
+	request.on('data', (chunk) => {
+	    body.push(chunk);
+	}).on('end', () => {
+
+	    body = Buffer.concat(body).toString();
+	    const id_token = JSON.parse(decodeURIComponent(body))["id_token"];
+
+	    admin.auth().verifyIdToken(id_token)
+		.then(function(decodedToken) {
+		    var username = decodedToken.uid;
+
+		    var connection = mysql.createConnection({
+			host     : 'nplat-instance.cphov5mfizlt.us-west-2.rds.amazonaws.com',
+			user     : 'android',
+			password : mysql_db_password,
+			database : 'nplat',
+			port : '3306',
+		    });
+		    
+		    connection.connect();
+		    
+		    followed_usernames = [];
+		    
+		    connection.query('select followed from follows where follower="'+username+'";',function (error, results, fields) {
+
+			for (let i = 0, len = results.length; i < len; ++i) {
+
+			    followed_usernames.push(results[i]["followed"]);
+
+			}
+			
+		    });
+
+
+		    connection.end( function(error) {
+
+			json_array =[]
+
+			for (let i = 0, len = followed_usernames.length; i < len; ++i){
+
+			    json_array.push({ "id" : (i+1), "username" : followed_usernames[i]});
+
+			}
+
+			response.write(JSON.stringify(json_array));
+			
+			response.end();	    
+		    
+		    });
+
+
+
+
+
+		});
+	})
+    }        
 
 
 });
