@@ -89,6 +89,119 @@ server.on('request', (request, response) => {
 	});
     }
 
+    if (request.method === 'POST' && request.url === '/follow/'){
+
+	let body = [];
+	request.on('data', (chunk) => {
+	    body.push(chunk);
+	}).on('end', () => {
+
+	    body = Buffer.concat(body).toString();
+
+	    const id_token = JSON.parse(decodeURIComponent(body))["id_token"];
+
+	    const username2 = JSON.parse(decodeURIComponent(body))["username"];
+
+	    admin.auth().verifyIdToken(id_token)
+		.then(function(decodedToken) {
+		    var username1 = decodedToken.uid;
+
+		    var connection = mysql.createConnection({
+			host     : 'nplat-instance.cphov5mfizlt.us-west-2.rds.amazonaws.com',
+			user     : 'android',
+			password : mysql_db_password,
+			database : 'nplat',
+			port : '3306',
+		    });
+
+		    
+		    if (username1 == username2) {
+		    
+			json_object = {"success" : false, "reason" : "You cannot follow yourself."};
+		    
+			response.write(JSON.stringify(json_object));
+			response.end();
+			console.log("Unsuccessful follow from " + username1 + " to " + username2 + ".");
+		    
+			return;
+
+		    }
+		    
+		    connection.connect();
+
+		    var results1;
+
+		    var results2;
+
+		    connection.query('select * from user_info where username = "'+username2+'";',function (error, results, fields) {
+
+			results1 = results;
+
+		    });
+		    
+		    connection.query('select * from follows where follower = "'+username1+'" and followed = "'+username2+'";',function (error, results, fields) {
+			results2 = results;
+			
+		    });
+
+		    connection.end( function(error) { 
+		    
+			if(results1.length == 0){
+			
+			
+			    json_object = {"success" : false, "reason" : "Username does not exist."};
+			    
+			    response.write(JSON.stringify(json_object));
+			    response.end();
+			    console.log("Unsuccessful follow from " + username1 + " to " + username2 + ".");
+			    
+			    return;
+			    
+			}
+			
+			
+			if(results2.length == 1){
+			    
+			    console.log("Unsuccessful follow from " + username1 + " to " + username2 + ".");
+			    
+			    json_object = {"success" : false, "reason" : "You are already following this user."};
+			    
+			    response.write(JSON.stringify(json_object));
+			    
+			    response.end();
+			    
+			    return;
+			}
+
+			var new_connection = mysql.createConnection({
+			    host     : 'nplat-instance.cphov5mfizlt.us-west-2.rds.amazonaws.com',
+			    user     : 'android',
+			    password : mysql_db_password,
+			    database : 'nplat',
+			    port : '3306',
+			});
+
+			new_connection.connect();		
+			
+			var now = new Date();
+		    
+			new_connection.query('insert into follows set follower="'+username1+'", followed="'+username2+'", time = "'+now.toISOString()+'";',function (error, results, fields) {
+			    json_object = {"success" : true, "reason" : ""}
+			    response.write(JSON.stringify(json_object));
+			    response.end();
+			});
+
+			new_connection.end( function(error) { });
+
+
+
+		    });
+
+		});
+	});
+    }
+    
+
     if (request.method === 'POST' && request.url === '/registerdevice/'){
 
 	let body = [];
