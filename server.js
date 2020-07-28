@@ -424,7 +424,7 @@ server.on('request', (request, response) => {
 		    posts_text = [];
 		    posts_username = [];
 		    
-		    connection.query('select username,text from posts;',function (error, results, fields) {
+                    connection.query('select t1.username,t1.text FROM posts as t1, follows as t2 where t1.username = t2.followed && t2.follower="'+username+'";',function (error, results, fields) {
 
 			for (let i = 0, len = results.length; i < len; ++i) {
 
