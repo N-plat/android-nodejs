@@ -360,15 +360,19 @@ server.on('request', (request, response) => {
 		    connection.connect();
 		    
 		    posts_text = [];
-		    posts_timestamp = [];		    
-
-		    connection.query('select time,text from posts where username="'+username+'";',function (error, results, fields) {
+		    posts_timestamp = [];
+		    posts_imageids = []
+		    posts_videoids = [];
+		    
+		    connection.query('select time,text,image_unique_id,video_unique_id from posts where username="'+username+'";',function (error, results, fields) {
 
 			for (let i = 0, len = results.length; i < len; ++i) {
 
 			    posts_text.push(results[i]["text"]);
 			    posts_timestamp.push(results[i]["time"]);
-
+			    posts_imageids.push(results[i]["image_unique_id"]);
+			    posts_videoids.push(results[i]["video_unique_id"]);
+			    
 			}
 			
 		    });
@@ -380,10 +384,12 @@ server.on('request', (request, response) => {
 
 			for (let i = 0, len = posts_text.length; i < len; ++i){
 
-			    json_array.push({ "id" : (i+1), "text" : posts_text[len-i-1], "username" : username, "timestamp" : posts_timestamp[len-i-1]});
+			    json_array.push({ "id" : (i+1), "text" : posts_text[len-i-1], "username" : username, "timestamp" : posts_timestamp[len-i-1], "imageid": posts_imageids[len-i-1], "videoid" : posts_videoids[len-i-1]});
 
 			}
 
+			console.log(JSON.stringify(json_array));
+			
 			response.write(JSON.stringify(json_array));
 
 			response.end();	    
@@ -426,14 +432,18 @@ server.on('request', (request, response) => {
 		    posts_text = [];
 		    posts_username = [];
 		    posts_timestamp = [];		    
+		    posts_imageids = []
+		    posts_videoids = [];
 		    
-                    connection.query('select t1.time,t1.username,t1.text FROM posts as t1, follows as t2 where t1.username = t2.followed && t2.follower="'+username+'";',function (error, results, fields) {
+                    connection.query('select t1.time,t1.username,t1.text,t1.image_unique_id,t1.video_unique_id FROM posts as t1, follows as t2 where t1.username = t2.followed && t2.follower="'+username+'";',function (error, results, fields) {
 
 			for (let i = 0, len = results.length; i < len; ++i) {
 
 			    posts_text.push(results[i]["text"]);
 			    posts_username.push(results[i]["username"]);
 			    posts_timestamp.push(results[i]["time"]);
+			    posts_imageids.push(results[i]["image_unique_id"]);
+			    posts_videoids.push(results[i]["video_unique_id"]);			    
 
 			}
 			
@@ -446,7 +456,7 @@ server.on('request', (request, response) => {
 
 			for (let i = 0, len = posts_text.length; i < len; ++i){
 
-			    json_array.push({ "id" : (i+1), "text" : posts_text[len-i-1], "username" : posts_username[len-i-1], "timestamp" : posts_timestamp[len-i-1]});
+			    json_array.push({ "id" : (i+1), "text" : posts_text[len-i-1], "username" : posts_username[len-i-1], "timestamp" : posts_timestamp[len-i-1], "imageid": posts_imageids[len-i-1], "videoid" : posts_videoids[len-i-1]});
 
 			}
 
