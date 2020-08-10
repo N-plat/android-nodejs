@@ -1,9 +1,12 @@
 const fs = require('fs');
 const http = require('http');
 const https = require('https');
+const multer = require('multer')
+const express = require('express')
+const bodyParser = require('body-parser');
 
 const hostname = 'ec2-54-201-85-235.us-west-2.compute.amazonaws.com';
-const port = 443;
+const port = 3000;
 
 const options = {
   key: fs.readFileSync('/etc/letsencrypt/live/android.n-plat.com/privkey.pem'),
@@ -36,61 +39,53 @@ admin.initializeApp({
   databaseURL: "https://nplat-ae998.firebaseio.com"
 });
 
+const app = express()
 
-server.on('request', (request, response) => {
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, '/efs/ec2-user/images/');
+    },
 
-    var now = new Date();
-
-    console.log(now.toISOString());
-    console.log(request.url);
-    console.log(request.method);
-    console.log(request.headers);
-
-    if (request.method === 'POST' && request.url === '/post/'){
-
-	let body = [];
-	request.on('data', (chunk) => {
-	    body.push(chunk);
-	}).on('end', () => {
-
-	    body = Buffer.concat(body).toString();
-
-	    const id_token = JSON.parse(decodeURIComponent(body))["id_token"];
-
-	    const message = JSON.parse(decodeURIComponent(body))["message"];
-
-	    admin.auth().verifyIdToken(id_token)
-		.then(function(decodedToken) {
-		    var username = decodedToken.uid;
-
-		    var connection = mysql.createConnection({
-			host     : 'nplat-instance.cphov5mfizlt.us-west-2.rds.amazonaws.com',
-			user     : 'android',
-			password : mysql_db_password,
-			database : 'nplat',
-			port : '3306',
-		    });
-		    
-		    connection.connect();
-
-		    var now = new Date();
-
-		    connection.query('insert into posts set username="'+username+'", text="'+message+'", time = "'+now.toISOString()+'";',function (error, results, fields) {
-			json_object = {"success" : true, "reason" : ""}
-			response.write(JSON.stringify(json_object));
-			response.end();
-		    });
-
-
-		    connection.end( function(error) { });
-
-		});
-
-	});
+    filename: (req, file, cb) => {
+        cb(null, file.originalname)
     }
+});
 
-    if (request.method === 'POST' && request.url === '/follow/'){
+const imageFileFilter = (req, file, cb) => {
 
+    console.log("Hello World 1");
+    
+    if(!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
+        return cb(new Error('You can upload only image files!'), false);
+    }
+    cb(null, true);
+};
+
+const upload = multer({ storage: storage, fileFilter: imageFileFilter});
+
+const uploadRouter = express.Router();
+
+uploadRouter.use(bodyParser.json());
+
+app.post('/post/',uploadRouter);
+
+uploadRouter.route('/post/')
+.post(upload.single('imageFile'), (req, res) => {
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'application/json');
+    res.json(req.file);
+})
+
+app.post('/follow',function (request, response) {
+
+	console.log("/follow");
+	var now = new Date();
+
+	console.log(now.toISOString());
+	console.log(request.url);
+	console.log(request.method);
+	console.log(request.headers);
+	
 	let body = [];
 	request.on('data', (chunk) => {
 	    body.push(chunk);
@@ -199,10 +194,9 @@ server.on('request', (request, response) => {
 
 		});
 	});
-    }
-    
+});
 
-    if (request.method === 'POST' && request.url === '/registerdevice/'){
+app.post('/registerdevice',function (request, response) {
 
 	let body = [];
 	request.on('data', (chunk) => {
@@ -250,10 +244,18 @@ server.on('request', (request, response) => {
 	    
 
 	})
-    }
-		  
-    if (request.method === 'POST' && request.url === '/login/') {
-	
+});
+	 
+app.post('/login',function (request, response) {
+
+	console.log("/login");
+	var now = new Date();
+
+	console.log(now.toISOString());
+	console.log(request.url);
+	console.log(request.method);
+	console.log(request.headers);
+    
 	let body = [];
 	request.on('data', (chunk) => {
 	    body.push(chunk);
@@ -332,10 +334,9 @@ server.on('request', (request, response) => {
 	    connection.end();
 	    
 	});
-    }
+});
 
-
-        if (request.method === 'POST' && request.url === '/posts/'){
+app.post('/posts',function (request, response) {
 
 	let body = [];
 	request.on('data', (chunk) => {
@@ -388,8 +389,6 @@ server.on('request', (request, response) => {
 
 			}
 
-			console.log(JSON.stringify(json_array));
-			
 			response.write(JSON.stringify(json_array));
 
 			response.end();	    
@@ -402,10 +401,9 @@ server.on('request', (request, response) => {
 
 		});
 	})
-    }
-
-
-    if (request.method === 'POST' && request.url === '/feed/'){
+});
+	 
+app.post('/feed',function (request, response) {
 	    
 	let body = [];
 	request.on('data', (chunk) => {
@@ -472,10 +470,10 @@ server.on('request', (request, response) => {
 
 		});
 	})
-    }
+});
 
-    if (request.method === 'POST' && request.url === '/followers/'){
-	    
+app.post('/followers',function (request, response) {
+	 
 	let body = [];
 	request.on('data', (chunk) => {
 	    body.push(chunk);
@@ -533,9 +531,10 @@ server.on('request', (request, response) => {
 
 		});
 	})
-    }
+});
 
-    if (request.method === 'POST' && request.url === '/following/'){
+app.post('/following',function (request, response) {
+
 	    
 	let body = [];
 	request.on('data', (chunk) => {
@@ -594,8 +593,17 @@ server.on('request', (request, response) => {
 
 		});
 	})
-    }        
+});        
 
+const express_server = https.createServer(options, app);
+
+express_server.listen(443,hostname, () => {
+
+  console.log(`Server running at https://${hostname}:443/`);
+    
+});
+
+server.on('request', (request, response) => {
 
 });
 	      
