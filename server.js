@@ -6,23 +6,12 @@ const express = require('express')
 const bodyParser = require('body-parser');
 
 const hostname = 'ec2-54-201-85-235.us-west-2.compute.amazonaws.com';
-const port = 3000;
+const port = 443;
 
 const options = {
   key: fs.readFileSync('/etc/letsencrypt/live/android.n-plat.com/privkey.pem'),
   cert: fs.readFileSync('/etc/letsencrypt/live/android.n-plat.com/fullchain.pem')
 };
-
-const server = https.createServer(options, (req, res) => {
-  res.statusCode = 200;
-  res.setHeader('Content-Type', 'text/plain');
-  //res.end('Test\n');
-});
-
-
-server.listen(port, hostname, () => {
-  console.log(`Server running at https://${hostname}:${port}/`);
-});
 
 var mysql_db_password = fs.readFileSync('/home/ec2-user/secrets.txt').toString().split('\n')[0];
 
@@ -595,15 +584,11 @@ app.post('/following',function (request, response) {
 	})
 });        
 
-const express_server = https.createServer(options, app);
+const server = https.createServer(options, app);
 
-express_server.listen(443,hostname, () => {
+server.listen(port,hostname, () => {
 
   console.log(`Server running at https://${hostname}:443/`);
     
 });
 
-server.on('request', (request, response) => {
-
-});
-	      
