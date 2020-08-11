@@ -30,7 +30,7 @@ admin.initializeApp({
 
 const app = express()
 
-const storage = multer.diskStorage({
+const imageStorage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, '/efs/ec2-user/images/');
     },
@@ -40,17 +40,36 @@ const storage = multer.diskStorage({
     }
 });
 
+const videoStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, '/efs/ec2-user/videos/');
+    },
+
+    filename: (req, file, cb) => {
+        cb(null, file.originalname)
+    }
+});
+
+
 const imageFileFilter = (req, file, cb) => {
 
-    console.log("Hello World 1");
-    
     if(!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
         return cb(new Error('You can upload only image files!'), false);
     }
     cb(null, true);
 };
 
-const upload = multer({ storage: storage, fileFilter: imageFileFilter});
+const videoFileFilter = (req, file, cb) => {
+
+    if(!file.originalname.match(/\.(mp4)$/)) {
+        return cb(new Error('You can upload only video files!'), false);
+    }
+    cb(null, true);
+};
+
+const uploadImage = multer({ storage: imageStorage, fileFilter: imageFileFilter});
+
+const uploadVideo = multer({ storage: videoStorage, fileFilter: videoFileFilter});
 
 const uploadRouter = express.Router();
 
@@ -58,12 +77,19 @@ uploadRouter.use(bodyParser.json());
 
 app.post('/post/',uploadRouter);
 
+//uploadRouter.route('/post/')
+//.post(uploadImage.single('imageFile'), (req, res) => {
+//    res.statusCode = 200;
+//    res.setHeader('Content-Type', 'application/json');
+//    res.json(req.file);
+//})
+
 uploadRouter.route('/post/')
-.post(upload.single('imageFile'), (req, res) => {
+.post(uploadVideo.single('videoFile'), (req, res) => {
     res.statusCode = 200;
     res.setHeader('Content-Type', 'application/json');
     res.json(req.file);
-})
+})    
 
 app.post('/follow',function (request, response) {
 
