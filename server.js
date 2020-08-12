@@ -1,9 +1,10 @@
 const fs = require('fs');
 const http = require('http');
 const https = require('https');
-const multer = require('multer')
+const multer = require('multer2')
 const express = require('express')
 const bodyParser = require('body-parser');
+
 
 const hostname = 'ec2-54-201-85-235.us-west-2.compute.amazonaws.com';
 const port = 443;
@@ -60,7 +61,6 @@ const imageFileFilter = (req, file, cb) => {
 };
 
 const videoFileFilter = (req, file, cb) => {
-
     if(!file.originalname.match(/\.(mp4)$/)) {
         return cb(new Error('You can upload only video files!'), false);
     }
