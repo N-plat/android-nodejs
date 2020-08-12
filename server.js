@@ -1,7 +1,7 @@
 const fs = require('fs');
 const http = require('http');
 const https = require('https');
-const multer = require('multer2')
+const multer = require('multer')
 const express = require('express')
 const bodyParser = require('body-parser');
 
