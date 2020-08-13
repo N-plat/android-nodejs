@@ -37,7 +37,35 @@ const imageStorage = multer.diskStorage({
     },
 
     filename: (req, file, cb) => {
-        cb(null, file.originalname)
+
+	var connection = mysql.createConnection({
+	    host     : 'nplat-instance.cphov5mfizlt.us-west-2.rds.amazonaws.com',
+	    user     : 'android',
+	    password : mysql_db_password,
+	    database : 'nplat',
+	    port : '3306',
+	});
+	
+	connection.connect();
+	
+	var now = new Date();
+
+	var image_unique_id = -1;
+	
+	connection.query('insert into images values(NULL,"username2",now(6),now(6))',function (error, results, fields) {
+
+	    connection.query('select LAST_INSERT_ID()',function (error, results, fields) {
+
+		image_unique_id = results[0]['LAST_INSERT_ID()']
+
+		cb(null, "image"+image_unique_id+".jpeg")
+		
+		connection.end( function(error) { });
+		
+	    });
+	    
+	});
+
     }
 });
 
@@ -47,7 +75,35 @@ const videoStorage = multer.diskStorage({
     },
 
     filename: (req, file, cb) => {
-        cb(null, file.originalname)
+
+	var connection = mysql.createConnection({
+	    host     : 'nplat-instance.cphov5mfizlt.us-west-2.rds.amazonaws.com',
+	    user     : 'android',
+	    password : mysql_db_password,
+	    database : 'nplat',
+	    port : '3306',
+	});
+	
+	connection.connect();
+	
+	var now = new Date();
+
+	var image_unique_id = -1;
+	
+	connection.query('insert into videos values(NULL,"username2",now(6),now(6))',function (error, results, fields) {
+
+	    connection.query('select LAST_INSERT_ID()',function (error, results, fields) {
+
+		image_unique_id = results[0]['LAST_INSERT_ID()']
+
+		cb(null, "video"+image_unique_id+".mp4")
+		
+		connection.end( function(error) { });
+		
+	    });
+	    
+	});
+
     }
 });
 
