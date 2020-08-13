@@ -83,7 +83,7 @@ app.post('/postwithvideo/',uploadVideoRouter);
 
 app.post('/postwithimage/',uploadImageRouter);
 
-uploadImageRouter.route('/post/')
+uploadImageRouter.route('/postwithimage/')
 .post(uploadImage.single('imageFile'), (req, res) => {
     res.statusCode = 200;
     res.setHeader('Content-Type', 'application/json');
