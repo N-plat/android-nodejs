@@ -71,25 +71,75 @@ const uploadImage = multer({ storage: imageStorage, fileFilter: imageFileFilter}
 
 const uploadVideo = multer({ storage: videoStorage, fileFilter: videoFileFilter});
 
-const uploadRouter = express.Router();
+const uploadImageRouter = express.Router();
 
-uploadRouter.use(bodyParser.json());
+const uploadVideoRouter = express.Router();
 
-app.post('/post/',uploadRouter);
+uploadImageRouter.use(bodyParser.json());
 
-//uploadRouter.route('/post/')
-//.post(uploadImage.single('imageFile'), (req, res) => {
-//    res.statusCode = 200;
-//    res.setHeader('Content-Type', 'application/json');
-//    res.json(req.file);
-//})
+uploadVideoRouter.use(bodyParser.json());
 
-uploadRouter.route('/post/')
+app.post('/postwithvideo/',uploadVideoRouter);
+
+app.post('/postwithimage/',uploadImageRouter);
+
+uploadImageRouter.route('/post/')
+.post(uploadImage.single('imageFile'), (req, res) => {
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'application/json');
+    res.json(req.file);
+})
+
+uploadVideoRouter.route('/postwithvideo/')
 .post(uploadVideo.single('videoFile'), (req, res) => {
     res.statusCode = 200;
     res.setHeader('Content-Type', 'application/json');
     res.json(req.file);
 })    
+
+app.post('/post',function (request, response) {
+
+    let body = [];
+    request.on('data', (chunk) => {
+	body.push(chunk);
+    }).on('end', () => {
+	
+	body = Buffer.concat(body).toString();
+	
+	const id_token = JSON.parse(decodeURIComponent(body))["id_token"];
+	
+	const message = JSON.parse(decodeURIComponent(body))["message"];
+	
+	admin.auth().verifyIdToken(id_token)
+	    .then(function(decodedToken) {
+		var username = decodedToken.uid;
+		
+		var connection = mysql.createConnection({
+		    host     : 'nplat-instance.cphov5mfizlt.us-west-2.rds.amazonaws.com',
+		    user     : 'android',
+		    password : mysql_db_password,
+		    database : 'nplat',
+		    port : '3306',
+		});
+		
+		connection.connect();
+		
+		var now = new Date();
+		
+		connection.query('insert into posts set username="'+username+'", text="'+message+'", time = "'+now.toISOString()+'";',function (error, results, fields) {
+		    json_object = {"success" : true, "reason" : ""}
+		    response.write(JSON.stringify(json_object));
+		    response.end();
+		});
+		
+		
+		connection.end( function(error) { });
+		
+	    });
+	
+    });
+});
+
 
 app.post('/follow',function (request, response) {
 
