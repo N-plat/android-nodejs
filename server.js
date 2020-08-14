@@ -52,7 +52,7 @@ const imageStorage = multer.diskStorage({
 
 	var image_unique_id = -1;
 	
-	connection.query('insert into images values(NULL,"username2",now(6),now(6))',function (error, results, fields) {
+	connection.query('insert into images values(NULL,NULL,now(6),now(6))',function (error, results, fields) {
 
 	    connection.query('select LAST_INSERT_ID()',function (error, results, fields) {
 
@@ -90,7 +90,7 @@ const videoStorage = multer.diskStorage({
 
 	var image_unique_id = -1;
 	
-	connection.query('insert into videos values(NULL,"username2",now(6),now(6))',function (error, results, fields) {
+	connection.query('insert into videos values(NULL,NULL,now(6),now(6))',function (error, results, fields) {
 
 	    connection.query('select LAST_INSERT_ID()',function (error, results, fields) {
 
@@ -171,11 +171,15 @@ uploadImageRouter.route('/postwithimage/')
 	    connection.connect();
 	    
 	    var now = new Date();
+
+	    connection.query('update images set username="'+username+'" where  unique_id="'+image_unique_id+'";',function (error, results, fields) {
 	    
-	    connection.query('insert into posts set username="'+username+'", text="'+message+'", image_unique_id="'+image_unique_id+'", time = "'+now.toISOString()+'";',function (error, results, fields) {
-		json_object = {"success" : true, "reason" : ""}
-		res.write(JSON.stringify(json_object));
-		res.end();
+		connection.query('insert into posts set username="'+username+'", text="'+message+'", image_unique_id="'+image_unique_id+'", time = "'+now.toISOString()+'";',function (error, results, fields) {
+		    json_object = {"success" : true, "reason" : ""}
+		    res.write(JSON.stringify(json_object));
+		    res.end();
+		});
+		
 	    });
 	    
 	    
@@ -217,13 +221,15 @@ uploadVideoRouter.route('/postwithvideo/')
 	    connection.connect();
 	    
 	    var now = new Date();
-	    
-	    connection.query('insert into posts set username="'+username+'", text="'+message+'", video_unique_id = "'+video_unique_id+'", time = "'+now.toISOString()+'";',function (error, results, fields) {
-		json_object = {"success" : true, "reason" : ""}
-		res.write(JSON.stringify(json_object));
-		res.end();
+
+	    connection.query('update videos set username="'+username+'" where  unique_id="'+video_unique_id+'";',function (error, results, fields) {
+		
+		connection.query('insert into posts set username="'+username+'", text="'+message+'", video_unique_id = "'+video_unique_id+'", time = "'+now.toISOString()+'";',function (error, results, fields) {
+		    json_object = {"success" : true, "reason" : ""}
+		    res.write(JSON.stringify(json_object));
+		    res.end();
+		});
 	    });
-	    
 	    
 	    connection.end( function(error) { });
 	    
