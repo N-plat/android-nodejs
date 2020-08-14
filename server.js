@@ -178,12 +178,13 @@ uploadImageRouter.route('/postwithimage/')
 		    json_object = {"success" : true, "reason" : ""}
 		    res.write(JSON.stringify(json_object));
 		    res.end();
+
+		    connection.end( function(error) { });
+		    
 		});
 		
 	    });
 	    
-	    
-	    connection.end( function(error) { });
 	    
 	});
     
@@ -228,10 +229,11 @@ uploadVideoRouter.route('/postwithvideo/')
 		    json_object = {"success" : true, "reason" : ""}
 		    res.write(JSON.stringify(json_object));
 		    res.end();
+
+		    connection.end( function(error) { });		    
+
 		});
 	    });
-	    
-	    connection.end( function(error) { });
 	    
 	});
     
