@@ -142,15 +142,93 @@ app.post('/postwithimage/',uploadImageRouter);
 uploadImageRouter.route('/postwithimage/')
 .post(uploadImage.single('imageFile'), (req, res) => {
     res.statusCode = 200;
-    res.setHeader('Content-Type', 'application/json');
-    res.json(req.file);
+//    res.setHeader('Content-Type', 'application/json');
+    //    res.json(req.file);
+
+    i = 5
+    image_unique_id = ""
+    while (req.file.filename[i] != ".") {
+	image_unique_id += req.file.filename[i]
+	i++
+    }
+    
+    const id_token = req.body["id_token"];
+	
+    const message = req.body["message"];
+	
+    admin.auth().verifyIdToken(id_token)
+	.then(function(decodedToken) {
+	    var username = decodedToken.uid;
+	    
+	    var connection = mysql.createConnection({
+		host     : 'nplat-instance.cphov5mfizlt.us-west-2.rds.amazonaws.com',
+		user     : 'android',
+		password : mysql_db_password,
+		database : 'nplat',
+		port : '3306',
+	    });
+	    
+	    connection.connect();
+	    
+	    var now = new Date();
+	    
+	    connection.query('insert into posts set username="'+username+'", text="'+message+'", image_unique_id="'+image_unique_id+'", time = "'+now.toISOString()+'";',function (error, results, fields) {
+		json_object = {"success" : true, "reason" : ""}
+		res.write(JSON.stringify(json_object));
+		res.end();
+	    });
+	    
+	    
+	    connection.end( function(error) { });
+	    
+	});
+    
 })
 
 uploadVideoRouter.route('/postwithvideo/')
 .post(uploadVideo.single('videoFile'), (req, res) => {
     res.statusCode = 200;
-    res.setHeader('Content-Type', 'application/json');
-    res.json(req.file);
+//    res.setHeader('Content-Type', 'application/json');
+//    res.json(req.file);
+
+    i = 5
+    video_unique_id = ""
+    while (req.file.filename[i] != ".") {
+	video_unique_id += req.file.filename[i]
+	i++
+    }
+    
+    const id_token = req.body["id_token"];
+	
+    const message = req.body["message"];
+	
+    admin.auth().verifyIdToken(id_token)
+	.then(function(decodedToken) {
+	    var username = decodedToken.uid;
+	    
+	    var connection = mysql.createConnection({
+		host     : 'nplat-instance.cphov5mfizlt.us-west-2.rds.amazonaws.com',
+		user     : 'android',
+		password : mysql_db_password,
+		database : 'nplat',
+		port : '3306',
+	    });
+	    
+	    connection.connect();
+	    
+	    var now = new Date();
+	    
+	    connection.query('insert into posts set username="'+username+'", text="'+message+'", video_unique_id = "'+video_unique_id+'", time = "'+now.toISOString()+'";',function (error, results, fields) {
+		json_object = {"success" : true, "reason" : ""}
+		res.write(JSON.stringify(json_object));
+		res.end();
+	    });
+	    
+	    
+	    connection.end( function(error) { });
+	    
+	});
+    
 })    
 
 app.post('/post',function (request, response) {
