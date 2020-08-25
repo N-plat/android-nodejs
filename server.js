@@ -676,9 +676,15 @@ app.post('/posts',function (request, response) {
 		    posts_videoids = [];
 		    posts_uniqueids = [];
 		    posts_nloves = [];
-		    posts_nreposts = [];		    		    
+		    posts_nreposts = [];
+		    posts_parent_text = [];
+		    posts_parent_username = [];
+		    posts_parent_timestamp = [];		    
+		    posts_parent_imageids = []
+		    posts_parent_videoids = [];
+		    posts_parent_uniqueids = [];		    
 		    
-		    connection.query('select time,text,image_unique_id,video_unique_id,unique_id,(select count(*) from loves where post_unique_id=unique_id) from posts where username="'+username+'";',function (error, results, fields) {
+		    connection.query('select *,(select count(*) from loves where post_unique_id=unique_id) from posts where username="'+username+'";',function (error, results, fields) {
 
 			for (let i = 0, len = results.length; i < len; ++i) {
 
@@ -687,8 +693,15 @@ app.post('/posts',function (request, response) {
 			    posts_imageids.push(results[i]["image_unique_id"]);
 			    posts_videoids.push(results[i]["video_unique_id"]);
 			    posts_uniqueids.push(results[i]["unique_id"]);
+			    posts_parent_text.push(results[i]["parent_text"]);
+			    posts_parent_username.push(results[i]["parent_username"]);
+			    posts_parent_timestamp.push(results[i]["parent_time"]);
+			    posts_parent_imageids.push(results[i]["parent_image_unique_id"]);
+			    posts_parent_videoids.push(results[i]["parent_video_unique_id"]);
+			    posts_parent_uniqueids.push(results[i]["parent_unique_id"]);			    			    
 			    posts_nloves.push(results[i]["(select count(*) from loves where post_unique_id=unique_id)"]);
-			    posts_nreposts.push(results[i]["(select count(*) from posts where parent_unique_id=unique_id)"]);			    			    
+			    posts_nreposts.push(results[i]["(select count(*) from posts where parent_unique_id=unique_id)"]);
+
 			    
 			}
 			
@@ -701,7 +714,7 @@ app.post('/posts',function (request, response) {
 
 			for (let i = 0, len = posts_text.length; i < len; ++i){
 
-			    json_array.push({ "id" : (i+1), "text" : posts_text[len-i-1], "username" : username, "timestamp" : posts_timestamp[len-i-1], "imageid": posts_imageids[len-i-1], "videoid" : posts_videoids[len-i-1], "uniqueid" : posts_uniqueids[len-i-1], "nloves" : posts_nloves[len-i-1]});
+			    json_array.push({ "id" : (i+1), "text" : posts_text[len-i-1], "username" : username, "timestamp" : posts_timestamp[len-i-1], "imageid": posts_imageids[len-i-1], "videoid" : posts_videoids[len-i-1],"uniqueid" : posts_uniqueids[len-i-1],"parent_text" : posts_parent_text[len-i-1], "parent_username" : posts_parent_username[len-i-1], "parent_timestamp" : posts_parent_timestamp[len-i-1], "parent_imageid": posts_parent_imageids[len-i-1], "parent_videoid" : posts_parent_videoids[len-i-1], "parent_uniqueid" : posts_parent_uniqueids[len-i-1],"nloves" : posts_nloves[len-i-1], "nreposts" : posts_nreposts[len-i-1]  });
 
 			}
 
@@ -757,8 +770,6 @@ app.post('/feed',function (request, response) {
 		    posts_parent_imageids = []
 		    posts_parent_videoids = [];
 		    posts_parent_uniqueids = [];
-		    posts_parent_nloves = [];
-		    posts_parent_nreposts = [];		    		    
 		    
 
                     connection.query('select t1.*,(select count(*) from loves where post_unique_id=t1.unique_id),(select count(*) from posts where parent_unique_id=t1.unique_id) FROM posts as t1, follows as t2 where t1.username = t2.followed && t2.follower="'+username+'";',function (error, results, fields) {
