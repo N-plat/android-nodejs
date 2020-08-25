@@ -282,6 +282,109 @@ app.post('/post',function (request, response) {
     });
 });
 
+app.post('/repost',function (request, response) {
+
+    var now = new Date();
+    
+    console.log(now.toISOString());
+    console.log(request.url);
+    console.log(request.method);
+    console.log(request.headers);
+    
+    let body = [];
+    request.on('data', (chunk) => {
+	body.push(chunk);
+    }).on('end', () => {
+	
+	body = Buffer.concat(body).toString();
+	
+	const id_token = JSON.parse(decodeURIComponent(body))["id_token"];
+	
+	const orignal_message = JSON.parse(decodeURIComponent(body))["message"];
+
+	const original_username = JSON.parse(decodeURIComponent(body))["username"];
+
+	const original_time = JSON.parse(decodeURIComponent(body))["time"];
+
+	const original_unique_id = JSON.parse(decodeURIComponent(body))["unique_id"];
+
+	const original_video_unique_id = JSON.parse(decodeURIComponent(body))["video_unique_id"];
+
+	const original_image_unique_id = JSON.parse(decodeURIComponent(body))["image_unique_id"];				
+
+	admin.auth().verifyIdToken(id_token)
+	    .then(function(decodedToken) {
+		var username = decodedToken.uid;
+		
+		var connection = mysql.createConnection({
+		    host     : 'nplat-instance.cphov5mfizlt.us-west-2.rds.amazonaws.com',
+		    user     : 'android',
+		    password : mysql_db_password,
+		    database : 'nplat',
+		    port : '3306',
+		});
+		
+		connection.connect();
+		
+		var now = new Date();
+		
+		connection.query('insert into posts set username="'+username+'", parent_unique_id="'+original_unique_id+'", parent_username="'+original_username+'", parent_text="'+orignal_message+'", parent_time="'+original_time+'",time = "'+now.toISOString()+'";',function (error, results, fields) {
+		    json_object = {"success" : true, "reason" : ""}
+		    response.write(JSON.stringify(json_object));
+		    response.end();
+		});
+		
+		
+		connection.end( function(error) { });
+		
+	    });
+	
+    });
+});
+
+app.post('/love',function (request, response) {
+
+    let body = [];
+    request.on('data', (chunk) => {
+	body.push(chunk);
+    }).on('end', () => {
+	
+	body = Buffer.concat(body).toString();
+	
+	const id_token = JSON.parse(decodeURIComponent(body))["id_token"];
+
+	const post_id = JSON.parse(decodeURIComponent(body))["post_id"];	
+	
+	admin.auth().verifyIdToken(id_token)
+	    .then(function(decodedToken) {
+		var username = decodedToken.uid;
+		
+		var connection = mysql.createConnection({
+		    host     : 'nplat-instance.cphov5mfizlt.us-west-2.rds.amazonaws.com',
+		    user     : 'android',
+		    password : mysql_db_password,
+		    database : 'nplat',
+		    port : '3306',
+		});
+		
+		connection.connect();
+		
+		var now = new Date();
+		
+		connection.query('insert into loves set username="'+username+'", post_unique_id="'+post_id+'", time = "'+now.toISOString()+'";',function (error, results, fields) {
+		    json_object = {"success" : true, "reason" : ""}
+		    response.write(JSON.stringify(json_object));
+		    response.end();
+		});
+		
+		
+		connection.end( function(error) { });
+		
+	    });
+	
+    });
+});
+
 
 app.post('/follow',function (request, response) {
 
@@ -571,8 +674,11 @@ app.post('/posts',function (request, response) {
 		    posts_timestamp = [];
 		    posts_imageids = []
 		    posts_videoids = [];
+		    posts_uniqueids = [];
+		    posts_nloves = [];
+		    posts_nreposts = [];		    		    
 		    
-		    connection.query('select time,text,image_unique_id,video_unique_id from posts where username="'+username+'";',function (error, results, fields) {
+		    connection.query('select time,text,image_unique_id,video_unique_id,unique_id,(select count(*) from loves where post_unique_id=unique_id) from posts where username="'+username+'";',function (error, results, fields) {
 
 			for (let i = 0, len = results.length; i < len; ++i) {
 
@@ -580,6 +686,9 @@ app.post('/posts',function (request, response) {
 			    posts_timestamp.push(results[i]["time"]);
 			    posts_imageids.push(results[i]["image_unique_id"]);
 			    posts_videoids.push(results[i]["video_unique_id"]);
+			    posts_uniqueids.push(results[i]["unique_id"]);
+			    posts_nloves.push(results[i]["(select count(*) from loves where post_unique_id=unique_id)"]);
+			    posts_nreposts.push(results[i]["(select count(*) from posts where parent_unique_id=unique_id)"]);			    			    
 			    
 			}
 			
@@ -592,7 +701,7 @@ app.post('/posts',function (request, response) {
 
 			for (let i = 0, len = posts_text.length; i < len; ++i){
 
-			    json_array.push({ "id" : (i+1), "text" : posts_text[len-i-1], "username" : username, "timestamp" : posts_timestamp[len-i-1], "imageid": posts_imageids[len-i-1], "videoid" : posts_videoids[len-i-1]});
+			    json_array.push({ "id" : (i+1), "text" : posts_text[len-i-1], "username" : username, "timestamp" : posts_timestamp[len-i-1], "imageid": posts_imageids[len-i-1], "videoid" : posts_videoids[len-i-1], "uniqueid" : posts_uniqueids[len-i-1], "nloves" : posts_nloves[len-i-1]});
 
 			}
 
@@ -639,8 +748,20 @@ app.post('/feed',function (request, response) {
 		    posts_timestamp = [];		    
 		    posts_imageids = []
 		    posts_videoids = [];
+		    posts_uniqueids = [];
+		    posts_nloves = [];
+		    posts_nreposts = [];
+		    posts_parent_text = [];
+		    posts_parent_username = [];
+		    posts_parent_timestamp = [];		    
+		    posts_parent_imageids = []
+		    posts_parent_videoids = [];
+		    posts_parent_uniqueids = [];
+		    posts_parent_nloves = [];
+		    posts_parent_nreposts = [];		    		    
 		    
-                    connection.query('select t1.time,t1.username,t1.text,t1.image_unique_id,t1.video_unique_id FROM posts as t1, follows as t2 where t1.username = t2.followed && t2.follower="'+username+'";',function (error, results, fields) {
+
+                    connection.query('select t1.*,(select count(*) from loves where post_unique_id=t1.unique_id),(select count(*) from posts where parent_unique_id=t1.unique_id) FROM posts as t1, follows as t2 where t1.username = t2.followed && t2.follower="'+username+'";',function (error, results, fields) {
 
 			for (let i = 0, len = results.length; i < len; ++i) {
 
@@ -648,8 +769,16 @@ app.post('/feed',function (request, response) {
 			    posts_username.push(results[i]["username"]);
 			    posts_timestamp.push(results[i]["time"]);
 			    posts_imageids.push(results[i]["image_unique_id"]);
-			    posts_videoids.push(results[i]["video_unique_id"]);			    
-
+			    posts_videoids.push(results[i]["video_unique_id"]);
+			    posts_uniqueids.push(results[i]["unique_id"]);
+			    posts_parent_text.push(results[i]["parent_text"]);
+			    posts_parent_username.push(results[i]["parent_username"]);
+			    posts_parent_timestamp.push(results[i]["parent_time"]);
+			    posts_parent_imageids.push(results[i]["parent_image_unique_id"]);
+			    posts_parent_videoids.push(results[i]["parent_video_unique_id"]);
+			    posts_parent_uniqueids.push(results[i]["parent_unique_id"]);			    
+			    posts_nloves.push(results[i]["(select count(*) from loves where post_unique_id=t1.unique_id)"]);
+			    posts_nreposts.push(results[i]["(select count(*) from posts where parent_unique_id=t1.unique_id)"]);
 			}
 			
 		    });
@@ -661,7 +790,7 @@ app.post('/feed',function (request, response) {
 
 			for (let i = 0, len = posts_text.length; i < len; ++i){
 
-			    json_array.push({ "id" : (i+1), "text" : posts_text[len-i-1], "username" : posts_username[len-i-1], "timestamp" : posts_timestamp[len-i-1], "imageid": posts_imageids[len-i-1], "videoid" : posts_videoids[len-i-1]});
+			    json_array.push({ "id" : (i+1), "text" : posts_text[len-i-1], "username" : posts_username[len-i-1], "timestamp" : posts_timestamp[len-i-1], "imageid": posts_imageids[len-i-1], "videoid" : posts_videoids[len-i-1], "uniqueid" : posts_uniqueids[len-i-1], "parent_text" : posts_parent_text[len-i-1], "parent_username" : posts_parent_username[len-i-1], "parent_timestamp" : posts_parent_timestamp[len-i-1], "parent_imageid": posts_parent_imageids[len-i-1], "parent_videoid" : posts_parent_videoids[len-i-1], "parent_uniqueid" : posts_parent_uniqueids[len-i-1]});
 
 			}
 
