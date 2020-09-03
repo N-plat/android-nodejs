@@ -344,6 +344,13 @@ app.post('/repost',function (request, response) {
 
 app.post('/love',function (request, response) {
 
+    var now = new Date();
+
+    console.log(now.toISOString());
+    console.log(request.url);
+    console.log(request.method);
+    console.log(request.headers);
+    
     let body = [];
     request.on('data', (chunk) => {
 	body.push(chunk);
@@ -354,6 +361,16 @@ app.post('/love',function (request, response) {
 	const id_token = JSON.parse(decodeURIComponent(body))["id_token"];
 
 	const post_id = JSON.parse(decodeURIComponent(body))["post_id"];	
+
+	if (id_token == undefined || post_id == undefined) {
+
+	    json_object = {"success" : false, "reason" : "id_token == undefined || post_id == undefined"};
+	    response.write(JSON.stringify(json_object));
+	    response.end();
+	    console.log("id_token == undefined || post_id == undefined");
+	    return;
+	    
+	}
 	
 	admin.auth().verifyIdToken(id_token)
 	    .then(function(decodedToken) {
@@ -388,177 +405,174 @@ app.post('/love',function (request, response) {
 
 app.post('/follow',function (request, response) {
 
-	console.log("/follow");
-	var now = new Date();
-
-	console.log(now.toISOString());
-	console.log(request.url);
-	console.log(request.method);
-	console.log(request.headers);
+    var now = new Date();
+    
+    console.log(now.toISOString());
+    console.log(request.url);
+    console.log(request.method);
+    console.log(request.headers);
+    
+    let body = [];
+    request.on('data', (chunk) => {
+	body.push(chunk);
+    }).on('end', () => {
 	
-	let body = [];
-	request.on('data', (chunk) => {
-	    body.push(chunk);
-	}).on('end', () => {
+	body = Buffer.concat(body).toString();
+	
+	const id_token = JSON.parse(decodeURIComponent(body))["id_token"];
+	
+	const username2 = JSON.parse(decodeURIComponent(body))["username"];
+	
+	admin.auth().verifyIdToken(id_token)
+	    .then(function(decodedToken) {
+		var username1 = decodedToken.uid;
+		
+		var connection = mysql.createConnection({
+		    host     : 'nplat-instance.cphov5mfizlt.us-west-2.rds.amazonaws.com',
+		    user     : 'android',
+		    password : mysql_db_password,
+		    database : 'nplat',
+		    port : '3306',
+		});
+		
+		
+		if (username1 == username2) {
+		    
+		    json_object = {"success" : false, "reason" : "You cannot follow yourself."};
+		    
+		    response.write(JSON.stringify(json_object));
+		    response.end();
+		    console.log("Unsuccessful follow from " + username1 + " to " + username2 + ".");
+		    
+		    return;
+		    
+		}
+		
+		connection.connect();
+		
+		var results1;
+		
+		var results2;
+		
+		connection.query('select * from user_info where username = "'+username2+'";',function (error, results, fields) {
+		    
+		    results1 = results;
+		    
+		});
+		
+		connection.query('select * from follows where follower = "'+username1+'" and followed = "'+username2+'";',function (error, results, fields) {
+		    results2 = results;
+		});
 
-	    body = Buffer.concat(body).toString();
-
-	    const id_token = JSON.parse(decodeURIComponent(body))["id_token"];
-
-	    const username2 = JSON.parse(decodeURIComponent(body))["username"];
-
-	    admin.auth().verifyIdToken(id_token)
-		.then(function(decodedToken) {
-		    var username1 = decodedToken.uid;
-
-		    var connection = mysql.createConnection({
+		connection.end( function(error) { 
+		    
+		    if(results1.length == 0){
+			
+			json_object = {"success" : false, "reason" : "Username does not exist."};
+			
+			response.write(JSON.stringify(json_object));
+			response.end();
+			console.log("Unsuccessful follow from " + username1 + " to " + username2 + ".");
+			
+			return;
+			
+		    }
+		    
+		    
+		    if(results2.length == 1){
+			
+			console.log("Unsuccessful follow from " + username1 + " to " + username2 + ".");
+			
+			json_object = {"success" : false, "reason" : "You are already following this user."};
+			
+			response.write(JSON.stringify(json_object));
+			
+			response.end();
+			
+			return;
+		    }
+		    
+		    var new_connection = mysql.createConnection({
 			host     : 'nplat-instance.cphov5mfizlt.us-west-2.rds.amazonaws.com',
 			user     : 'android',
 			password : mysql_db_password,
 			database : 'nplat',
 			port : '3306',
 		    });
-
 		    
-		    if (username1 == username2) {
+		    new_connection.connect();		
 		    
-			json_object = {"success" : false, "reason" : "You cannot follow yourself."};
+		    var now = new Date();
 		    
+		    new_connection.query('insert into follows set follower="'+username1+'", followed="'+username2+'", time = "'+now.toISOString()+'";',function (error, results, fields) {
+			json_object = {"success" : true, "reason" : ""}
 			response.write(JSON.stringify(json_object));
 			response.end();
-			console.log("Unsuccessful follow from " + username1 + " to " + username2 + ".");
-		    
-			return;
-
-		    }
-		    
-		    connection.connect();
-
-		    var results1;
-
-		    var results2;
-
-		    connection.query('select * from user_info where username = "'+username2+'";',function (error, results, fields) {
-
-			results1 = results;
-
 		    });
 		    
-		    connection.query('select * from follows where follower = "'+username1+'" and followed = "'+username2+'";',function (error, results, fields) {
-			results2 = results;
-			
-		    });
-
-		    connection.end( function(error) { 
+		    new_connection.end( function(error) { });
 		    
-			if(results1.length == 0){
-			
-			
-			    json_object = {"success" : false, "reason" : "Username does not exist."};
-			    
-			    response.write(JSON.stringify(json_object));
-			    response.end();
-			    console.log("Unsuccessful follow from " + username1 + " to " + username2 + ".");
-			    
-			    return;
-			    
-			}
-			
-			
-			if(results2.length == 1){
-			    
-			    console.log("Unsuccessful follow from " + username1 + " to " + username2 + ".");
-			    
-			    json_object = {"success" : false, "reason" : "You are already following this user."};
-			    
-			    response.write(JSON.stringify(json_object));
-			    
-			    response.end();
-			    
-			    return;
-			}
-
-			var new_connection = mysql.createConnection({
-			    host     : 'nplat-instance.cphov5mfizlt.us-west-2.rds.amazonaws.com',
-			    user     : 'android',
-			    password : mysql_db_password,
-			    database : 'nplat',
-			    port : '3306',
-			});
-
-			new_connection.connect();		
-			
-			var now = new Date();
-		    
-			new_connection.query('insert into follows set follower="'+username1+'", followed="'+username2+'", time = "'+now.toISOString()+'";',function (error, results, fields) {
-			    json_object = {"success" : true, "reason" : ""}
-			    response.write(JSON.stringify(json_object));
-			    response.end();
-			});
-
-			new_connection.end( function(error) { });
-
-
-
-		    });
-
 		});
-	});
+
+	    });
+    });
 });
 
 app.post('/registerdevice',function (request, response) {
 
-	let body = [];
-	request.on('data', (chunk) => {
-	    body.push(chunk);
-	}).on('end', () => {
-
-	    body = Buffer.concat(body).toString();
-	    const id_token = JSON.parse(decodeURIComponent(body))["id_token"];
-	    const device_token  = JSON.parse(decodeURIComponent(body))["device_token"];
-
-	    admin.auth().verifyIdToken(id_token)
-		.then(function(decodedToken) {
-		    var username = decodedToken.uid;
-		    
-		    var connection = mysql.createConnection({
-			host     : 'nplat-instance.cphov5mfizlt.us-west-2.rds.amazonaws.com',
-			user     : 'android',
-			password : mysql_db_password,
+    var now = new Date();
+    
+    console.log(now.toISOString());
+    console.log(request.url);
+    console.log(request.method);
+    console.log(request.headers);
+    
+    let body = [];
+    request.on('data', (chunk) => {
+	body.push(chunk);
+    }).on('end', () => {
+	
+	body = Buffer.concat(body).toString();
+	const id_token = JSON.parse(decodeURIComponent(body))["id_token"];
+	const device_token  = JSON.parse(decodeURIComponent(body))["device_token"];
+	
+	admin.auth().verifyIdToken(id_token)
+	    .then(function(decodedToken) {
+		var username = decodedToken.uid;
+		
+		var connection = mysql.createConnection({
+		    host     : 'nplat-instance.cphov5mfizlt.us-west-2.rds.amazonaws.com',
+		    user     : 'android',
+		    password : mysql_db_password,
 			database : 'nplat',
-			port : '3306',
-		    });
-		    
-		    connection.connect();
-		    
-		    var now = new Date();
-
-		    connection.query('insert into device_tokens set username = "'+username+'", token="'+device_token+'", registration_time="'+now.toISOString()+'";',function (error, results, fields) {
-					 
-			if (error) console.log(error);
-					 
-		    });
-		    
-		    connection.end();
-		    
-		    response.end();
-
-		}).catch(function(error) {
-		    
-		    console.log(error);
-		    
-		    // Handle error
+		    port : '3306',
 		});
-	    
-	    
-	    
-
+		
+		connection.connect();
+		
+		var now = new Date();
+		
+		connection.query('insert into device_tokens set username = "'+username+'", token="'+device_token+'", registration_time="'+now.toISOString()+'";',function (error, results, fields) {
+		    
+		    if (error) console.log(error);
+		    
+		});
+		
+		connection.end();
+		
+		response.end();
+		
+	    }).catch(function(error) {
+		
+		console.log(error);
+		
+		// Handle error
+	    });
 	})
 });
 	 
 app.post('/login',function (request, response) {
 
-	console.log("/login");
 	var now = new Date();
 
 	console.log(now.toISOString());
@@ -648,297 +662,308 @@ app.post('/login',function (request, response) {
 
 app.post('/posts',function (request, response) {
 
-	let body = [];
-	request.on('data', (chunk) => {
-	    body.push(chunk);
-	}).on('end', () => {
+    var now = new Date();
+    
+    console.log(now.toISOString());
+    console.log(request.url);
+    console.log(request.method);
+    console.log(request.headers);
 
-	    body = Buffer.concat(body).toString();
-	    const id_token = JSON.parse(decodeURIComponent(body))["id_token"];
-
-	    admin.auth().verifyIdToken(id_token)
-		.then(function(decodedToken) {
-		    var username = decodedToken.uid;
-
-		    var connection = mysql.createConnection({
-			host     : 'nplat-instance.cphov5mfizlt.us-west-2.rds.amazonaws.com',
-			user     : 'android',
-			password : mysql_db_password,
-			database : 'nplat',
-			port : '3306',
-		    });
-		    
-		    connection.connect();
-		    
-		    posts_text = [];
-		    posts_timestamp = [];
-		    posts_imageids = []
-		    posts_videoids = [];
-		    posts_uniqueids = [];
-		    posts_nloves = [];
-		    posts_nreposts = [];
-		    posts_parent_text = [];
-		    posts_parent_username = [];
-		    posts_parent_timestamp = [];		    
-		    posts_parent_imageids = []
-		    posts_parent_videoids = [];
-		    posts_parent_uniqueids = [];		    
-		    
-		    connection.query('select t1.*,(select unique_id from posts where unique_id=t1.parent_unique_id limit 1),(select text from posts where unique_id=t1.parent_unique_id limit 1),(select video_unique_id from posts where unique_id=t1.parent_unique_id limit 1),(select image_unique_id from posts where unique_id=t1.parent_unique_id limit 1),(select time from posts where unique_id=t1.parent_unique_id limit 1),(select username from posts where unique_id=t1.parent_unique_id limit 1),(select count(*) from loves where post_unique_id=t1.unique_id),(select count(*) from posts where parent_unique_id=t1.unique_id),(select count(*) from loves where post_unique_id=t1.parent_unique_id),(select count(*) from posts where parent_unique_id=t1.parent_unique_id) FROM posts as t1 WHERE t1.username="'+username+'";',function (error, results, fields) {
-
-			for (let i = 0, len = results.length; i < len; ++i) {
-
-			    posts_text.push(results[i]["text"]);
-			    posts_timestamp.push(results[i]["time"]);
-			    posts_imageids.push(results[i]["image_unique_id"]);
-			    posts_videoids.push(results[i]["video_unique_id"]);
-			    posts_uniqueids.push(results[i]["unique_id"]);
-			    posts_parent_text.push(results[i]["(select text from posts where unique_id=t1.parent_unique_id limit 1)"]);
-			    posts_parent_username.push(results[i]["(select username from posts where unique_id=t1.parent_unique_id limit 1)"]);
-			    posts_parent_timestamp.push(results[i]["(select time from posts where unique_id=t1.parent_unique_id limit 1)"]);
-			    posts_parent_imageids.push(results[i]["(select image_unique_id from posts where unique_id=t1.parent_unique_id limit 1)"]);
-			    posts_parent_videoids.push(results[i]["(select video_unique_id from posts where unique_id=t1.parent_unique_id limit 1)"]);
-			    posts_parent_uniqueids.push(results[i]["(select count(*) from posts where parent_unique_id=t1.unique_id)"]);
-			    posts_nloves.push(results[i]["(select count(*) from loves where post_unique_id=unique_id)"]);
-			    posts_nreposts.push(results[i]["(select count(*) from posts where parent_unique_id=unique_id)"]);
-
-			    
-			}
-			
-		    });
-
-
-		    connection.end( function(error) {
-
-			json_array =[]
-
-			for (let i = 0, len = posts_text.length; i < len; ++i){
-
-			    json_array.push({ "id" : (i+1), "text" : posts_text[len-i-1], "username" : username, "timestamp" : posts_timestamp[len-i-1], "imageid": posts_imageids[len-i-1], "videoid" : posts_videoids[len-i-1],"uniqueid" : posts_uniqueids[len-i-1],"parent_text" : posts_parent_text[len-i-1], "parent_username" : posts_parent_username[len-i-1], "parent_timestamp" : posts_parent_timestamp[len-i-1], "parent_imageid": posts_parent_imageids[len-i-1], "parent_videoid" : posts_parent_videoids[len-i-1], "parent_uniqueid" : posts_parent_uniqueids[len-i-1],"nloves" : posts_nloves[len-i-1], "nreposts" : posts_nreposts[len-i-1]  });
-
-			}
-
-			response.write(JSON.stringify(json_array));
-
-			response.end();	    
-		    
-		    });
-
-
-
-
-
+    
+    let body = [];
+    request.on('data', (chunk) => {
+	body.push(chunk);
+    }).on('end', () => {
+	
+	body = Buffer.concat(body).toString();
+	const id_token = JSON.parse(decodeURIComponent(body))["id_token"];
+	
+	admin.auth().verifyIdToken(id_token)
+	    .then(function(decodedToken) {
+		var username = decodedToken.uid;
+		
+		var connection = mysql.createConnection({
+		    host     : 'nplat-instance.cphov5mfizlt.us-west-2.rds.amazonaws.com',
+		    user     : 'android',
+		    password : mysql_db_password,
+		    database : 'nplat',
+		    port : '3306',
 		});
+		
+		connection.connect();
+		
+		posts_text = [];
+		posts_timestamp = [];
+		posts_imageids = []
+		posts_videoids = [];
+		posts_uniqueids = [];
+		posts_nloves = [];
+		posts_nreposts = [];
+		posts_parent_text = [];
+		posts_parent_username = [];
+		posts_parent_timestamp = [];		    
+		posts_parent_imageids = []
+		posts_parent_videoids = [];
+		posts_parent_uniqueids = [];		    
+		
+		connection.query('select t1.*,(select unique_id from posts where unique_id=t1.parent_unique_id limit 1),(select text from posts where unique_id=t1.parent_unique_id limit 1),(select video_unique_id from posts where unique_id=t1.parent_unique_id limit 1),(select image_unique_id from posts where unique_id=t1.parent_unique_id limit 1),(select time from posts where unique_id=t1.parent_unique_id limit 1),(select username from posts where unique_id=t1.parent_unique_id limit 1),(select count(*) from loves where post_unique_id=t1.unique_id),(select count(*) from posts where parent_unique_id=t1.unique_id),(select count(*) from loves where post_unique_id=t1.parent_unique_id),(select count(*) from posts where parent_unique_id=t1.parent_unique_id) FROM posts as t1 WHERE t1.username="'+username+'";',function (error, results, fields) {
+
+		    for (let i = 0, len = results.length; i < len; ++i) {
+			
+			posts_text.push(results[i]["text"]);
+			posts_timestamp.push(results[i]["time"]);
+			posts_imageids.push(results[i]["image_unique_id"]);
+			posts_videoids.push(results[i]["video_unique_id"]);
+			posts_uniqueids.push(results[i]["unique_id"]);
+			posts_parent_text.push(results[i]["(select text from posts where unique_id=t1.parent_unique_id limit 1)"]);
+			posts_parent_username.push(results[i]["(select username from posts where unique_id=t1.parent_unique_id limit 1)"]);
+			posts_parent_timestamp.push(results[i]["(select time from posts where unique_id=t1.parent_unique_id limit 1)"]);
+			posts_parent_imageids.push(results[i]["(select image_unique_id from posts where unique_id=t1.parent_unique_id limit 1)"]);
+			posts_parent_videoids.push(results[i]["(select video_unique_id from posts where unique_id=t1.parent_unique_id limit 1)"]);
+			posts_parent_uniqueids.push(results[i]["(select count(*) from posts where parent_unique_id=t1.unique_id)"]);
+			posts_nloves.push(results[i]["(select count(*) from loves where post_unique_id=unique_id)"]);
+			posts_nreposts.push(results[i]["(select count(*) from posts where parent_unique_id=unique_id)"]);
+			
+			
+		    }
+		    
+		});
+		
+		
+		connection.end( function(error) {
+		    
+		    json_array =[]
+		    
+		    for (let i = 0, len = posts_text.length; i < len; ++i){
+			
+			json_array.push({ "id" : (i+1), "text" : posts_text[len-i-1], "username" : username, "timestamp" : posts_timestamp[len-i-1], "imageid": posts_imageids[len-i-1], "videoid" : posts_videoids[len-i-1],"uniqueid" : posts_uniqueids[len-i-1],"parent_text" : posts_parent_text[len-i-1], "parent_username" : posts_parent_username[len-i-1], "parent_timestamp" : posts_parent_timestamp[len-i-1], "parent_imageid": posts_parent_imageids[len-i-1], "parent_videoid" : posts_parent_videoids[len-i-1], "parent_uniqueid" : posts_parent_uniqueids[len-i-1],"nloves" : posts_nloves[len-i-1], "nreposts" : posts_nreposts[len-i-1]  });
+			
+		    }
+		    
+		    response.write(JSON.stringify(json_array));
+		    
+		    response.end();	    
+		    
+		});
+	    });
 	})
 });
 	 
 app.post('/feed',function (request, response) {
-	    
-	let body = [];
-	request.on('data', (chunk) => {
-	    body.push(chunk);
-	}).on('end', () => {
 
-	    body = Buffer.concat(body).toString();
-	    const id_token = JSON.parse(decodeURIComponent(body))["id_token"];
+    var now = new Date();
+    
+    console.log(now.toISOString());
+    console.log(request.url);
+    console.log(request.method);
+    console.log(request.headers);
 
-	    admin.auth().verifyIdToken(id_token)
-		.then(function(decodedToken) {
-		    var username = decodedToken.uid;
-
-		    var connection = mysql.createConnection({
-			host     : 'nplat-instance.cphov5mfizlt.us-west-2.rds.amazonaws.com',
-			user     : 'android',
-			password : mysql_db_password,
-			database : 'nplat',
-			port : '3306',
-		    });
-		    
-		    connection.connect();
-		    
-		    posts_text = [];
-		    posts_username = [];
-		    posts_timestamp = [];		    
-		    posts_imageids = []
-		    posts_videoids = [];
-		    posts_uniqueids = [];
-		    posts_nloves = [];
-		    posts_nreposts = [];
-		    posts_parent_text = [];
-		    posts_parent_username = [];
-		    posts_parent_timestamp = [];		    
-		    posts_parent_imageids = []
-		    posts_parent_videoids = [];
-		    posts_parent_uniqueids = [];
-
-                    connection.query('select t1.*,(select unique_id from posts where unique_id=t1.parent_unique_id limit 1),(select text from posts where unique_id=t1.parent_unique_id limit 1),(select video_unique_id from posts where unique_id=t1.parent_unique_id limit 1),(select image_unique_id from posts where unique_id=t1.parent_unique_id limit 1),(select time from posts where unique_id=t1.parent_unique_id limit 1),(select username from posts where unique_id=t1.parent_unique_id limit 1),(select count(*) from loves where post_unique_id=t1.unique_id),(select count(*) from posts where parent_unique_id=t1.unique_id),(select count(*) from loves where post_unique_id=t1.parent_unique_id),(select count(*) from posts where parent_unique_id=t1.parent_unique_id) FROM posts as t1, follows as t2 where t1.username = t2.followed && t2.follower="'+username+'";',function (error, results, fields) {
-
-			for (let i = 0, len = results.length; i < len; ++i) {
-
-			    posts_text.push(results[i]["text"]);
-			    posts_username.push(results[i]["username"]);
-			    posts_timestamp.push(results[i]["time"]);
-			    posts_imageids.push(results[i]["image_unique_id"]);
-			    posts_videoids.push(results[i]["video_unique_id"]);
-			    posts_uniqueids.push(results[i]["unique_id"]);
-			    posts_parent_text.push(results[i]["(select text from posts where unique_id=t1.parent_unique_id limit 1)"]);
-			    posts_parent_username.push(results[i]["(select username from posts where unique_id=t1.parent_unique_id limit 1)"]);
-			    posts_parent_timestamp.push(results[i]["(select time from posts where unique_id=t1.parent_unique_id limit 1)"]);
-			    posts_parent_imageids.push(results[i]["(select image_unique_id from posts where unique_id=t1.parent_unique_id limit 1)"]);
-			    posts_parent_videoids.push(results[i]["(select video_unique_id from posts where unique_id=t1.parent_unique_id limit 1)"]);
-			    posts_parent_uniqueids.push(results[i]["parent_unique_id"]);			    
-			    posts_nloves.push(results[i]["(select count(*) from loves where post_unique_id=t1.unique_id)"]);
-			    posts_nreposts.push(results[i]["(select count(*) from posts where parent_unique_id=t1.unique_id)"]);
-			}
-			
-		    });
-
-
-		    connection.end( function(error) {
-
-			json_array =[]
-
-			for (let i = 0, len = posts_text.length; i < len; ++i){
-
-			    json_array.push({ "id" : (i+1), "text" : posts_text[len-i-1], "username" : posts_username[len-i-1], "timestamp" : posts_timestamp[len-i-1], "imageid": posts_imageids[len-i-1], "videoid" : posts_videoids[len-i-1], "uniqueid" : posts_uniqueids[len-i-1], "parent_text" : posts_parent_text[len-i-1], "parent_username" : posts_parent_username[len-i-1], "parent_timestamp" : posts_parent_timestamp[len-i-1], "parent_imageid": posts_parent_imageids[len-i-1], "parent_videoid" : posts_parent_videoids[len-i-1], "parent_uniqueid" : posts_parent_uniqueids[len-i-1]});
-
-			}
-
-			response.write(JSON.stringify(json_array));
-
-			response.end();	    
-		    
-		    });
-
-
-
-
-
+    
+    let body = [];
+    request.on('data', (chunk) => {
+	body.push(chunk);
+    }).on('end', () => {
+	
+	body = Buffer.concat(body).toString();
+	const id_token = JSON.parse(decodeURIComponent(body))["id_token"];
+	
+	admin.auth().verifyIdToken(id_token)
+	    .then(function(decodedToken) {
+		var username = decodedToken.uid;
+		
+		var connection = mysql.createConnection({
+		    host     : 'nplat-instance.cphov5mfizlt.us-west-2.rds.amazonaws.com',
+		    user     : 'android',
+		    password : mysql_db_password,
+		    database : 'nplat',
+		    port : '3306',
 		});
-	})
+		
+		connection.connect();
+		
+		posts_text = [];
+		posts_username = [];
+		posts_timestamp = [];		    
+		posts_imageids = []
+		posts_videoids = [];
+		posts_uniqueids = [];
+		posts_nloves = [];
+		posts_nreposts = [];
+		posts_parent_text = [];
+		posts_parent_username = [];
+		posts_parent_timestamp = [];		    
+		posts_parent_imageids = []
+		posts_parent_videoids = [];
+		posts_parent_uniqueids = [];
+		
+                connection.query('select t1.*,(select unique_id from posts where unique_id=t1.parent_unique_id limit 1),(select text from posts where unique_id=t1.parent_unique_id limit 1),(select video_unique_id from posts where unique_id=t1.parent_unique_id limit 1),(select image_unique_id from posts where unique_id=t1.parent_unique_id limit 1),(select time from posts where unique_id=t1.parent_unique_id limit 1),(select username from posts where unique_id=t1.parent_unique_id limit 1),(select count(*) from loves where post_unique_id=t1.unique_id),(select count(*) from posts where parent_unique_id=t1.unique_id),(select count(*) from loves where post_unique_id=t1.parent_unique_id),(select count(*) from posts where parent_unique_id=t1.parent_unique_id) FROM posts as t1, follows as t2 where t1.username = t2.followed && t2.follower="'+username+'";',function (error, results, fields) {
+
+		    for (let i = 0, len = results.length; i < len; ++i) {
+			
+			posts_text.push(results[i]["text"]);
+			posts_username.push(results[i]["username"]);
+			posts_timestamp.push(results[i]["time"]);
+			posts_imageids.push(results[i]["image_unique_id"]);
+			posts_videoids.push(results[i]["video_unique_id"]);
+			posts_uniqueids.push(results[i]["unique_id"]);
+			posts_parent_text.push(results[i]["(select text from posts where unique_id=t1.parent_unique_id limit 1)"]);
+			posts_parent_username.push(results[i]["(select username from posts where unique_id=t1.parent_unique_id limit 1)"]);
+			posts_parent_timestamp.push(results[i]["(select time from posts where unique_id=t1.parent_unique_id limit 1)"]);
+			posts_parent_imageids.push(results[i]["(select image_unique_id from posts where unique_id=t1.parent_unique_id limit 1)"]);
+			posts_parent_videoids.push(results[i]["(select video_unique_id from posts where unique_id=t1.parent_unique_id limit 1)"]);
+			posts_parent_uniqueids.push(results[i]["parent_unique_id"]);			    
+			posts_nloves.push(results[i]["(select count(*) from loves where post_unique_id=t1.unique_id)"]);
+			posts_nreposts.push(results[i]["(select count(*) from posts where parent_unique_id=t1.unique_id)"]);
+		    }
+		    
+		});
+		
+		
+		connection.end( function(error) {
+		    
+		    json_array =[]
+		    
+		    for (let i = 0, len = posts_text.length; i < len; ++i){
+
+			json_array.push({ "id" : (i+1), "text" : posts_text[len-i-1], "username" : posts_username[len-i-1], "timestamp" : posts_timestamp[len-i-1], "imageid": posts_imageids[len-i-1], "videoid" : posts_videoids[len-i-1], "uniqueid" : posts_uniqueids[len-i-1], "parent_text" : posts_parent_text[len-i-1], "parent_username" : posts_parent_username[len-i-1], "parent_timestamp" : posts_parent_timestamp[len-i-1], "parent_imageid": posts_parent_imageids[len-i-1], "parent_videoid" : posts_parent_videoids[len-i-1], "parent_uniqueid" : posts_parent_uniqueids[len-i-1]});
+			
+			}
+		    
+		    response.write(JSON.stringify(json_array));
+		    
+		    response.end();	    
+		    
+		});
+	    });
+    })
 });
 
 app.post('/followers',function (request, response) {
-	 
-	let body = [];
-	request.on('data', (chunk) => {
-	    body.push(chunk);
-	}).on('end', () => {
 
-	    body = Buffer.concat(body).toString();
-	    const id_token = JSON.parse(decodeURIComponent(body))["id_token"];
+    var now = new Date();
+    
+    console.log(now.toISOString());
+    console.log(request.url);
+    console.log(request.method);
+    console.log(request.headers);
 
-	    admin.auth().verifyIdToken(id_token)
-		.then(function(decodedToken) {
-		    var username = decodedToken.uid;
-
-		    var connection = mysql.createConnection({
-			host     : 'nplat-instance.cphov5mfizlt.us-west-2.rds.amazonaws.com',
-			user     : 'android',
-			password : mysql_db_password,
-			database : 'nplat',
-			port : '3306',
-		    });
-		    
-		    connection.connect();
-		    
-		    following_usernames = [];
-		    
-		    connection.query('select follower from follows where followed="'+username+'";',function (error, results, fields) {
-
-			for (let i = 0, len = results.length; i < len; ++i) {
-
-			    following_usernames.push(results[i]["follower"]);
-
-			}
-			
-		    });
-
-
-		    connection.end( function(error) {
-
-			json_array =[]
-
-			for (let i = 0, len = following_usernames.length; i < len; ++i){
-
-			    json_array.push({ "id" : (i+1), "username" : following_usernames[i]});
-
-			}
-
-			response.write(JSON.stringify(json_array));
-
-			response.end();	    
-		    
-		    });
-
-
-
-
-
+    
+    let body = [];
+    request.on('data', (chunk) => {
+	body.push(chunk);
+    }).on('end', () => {
+	
+	body = Buffer.concat(body).toString();
+	const id_token = JSON.parse(decodeURIComponent(body))["id_token"];
+	
+	admin.auth().verifyIdToken(id_token)
+	    .then(function(decodedToken) {
+		var username = decodedToken.uid;
+		
+		var connection = mysql.createConnection({
+		    host     : 'nplat-instance.cphov5mfizlt.us-west-2.rds.amazonaws.com',
+		    user     : 'android',
+		    password : mysql_db_password,
+		    database : 'nplat',
+		    port : '3306',
 		});
-	})
+		
+		connection.connect();
+		
+		following_usernames = [];
+		
+		connection.query('select follower from follows where followed="'+username+'";',function (error, results, fields) {
+
+		    for (let i = 0, len = results.length; i < len; ++i) {
+			
+			following_usernames.push(results[i]["follower"]);
+			
+		    }
+		    
+		});
+		
+		
+		connection.end( function(error) {
+		    
+		    json_array =[]
+		    
+		    for (let i = 0, len = following_usernames.length; i < len; ++i){
+			
+			json_array.push({ "id" : (i+1), "username" : following_usernames[i]});
+			
+		    }
+		    
+		    response.write(JSON.stringify(json_array));
+		    
+		    response.end();	    
+		    
+		});
+	    });
+    })
 });
 
 app.post('/following',function (request, response) {
 
+    var now = new Date();
+    
+    console.log(now.toISOString());
+    console.log(request.url);
+    console.log(request.method);
+    console.log(request.headers);
+    
 	    
-	let body = [];
-	request.on('data', (chunk) => {
-	    body.push(chunk);
-	}).on('end', () => {
-
-	    body = Buffer.concat(body).toString();
-	    const id_token = JSON.parse(decodeURIComponent(body))["id_token"];
-
-	    admin.auth().verifyIdToken(id_token)
-		.then(function(decodedToken) {
-		    var username = decodedToken.uid;
-
-		    var connection = mysql.createConnection({
-			host     : 'nplat-instance.cphov5mfizlt.us-west-2.rds.amazonaws.com',
-			user     : 'android',
+    let body = [];
+    request.on('data', (chunk) => {
+	body.push(chunk);
+    }).on('end', () => {
+	
+	body = Buffer.concat(body).toString();
+	const id_token = JSON.parse(decodeURIComponent(body))["id_token"];
+	
+	admin.auth().verifyIdToken(id_token)
+	    .then(function(decodedToken) {
+		var username = decodedToken.uid;
+		
+		var connection = mysql.createConnection({
+		    host     : 'nplat-instance.cphov5mfizlt.us-west-2.rds.amazonaws.com',
+		    user     : 'android',
 			password : mysql_db_password,
-			database : 'nplat',
-			port : '3306',
-		    });
-		    
-		    connection.connect();
-		    
-		    followed_usernames = [];
-		    
-		    connection.query('select followed from follows where follower="'+username+'";',function (error, results, fields) {
-
-			for (let i = 0, len = results.length; i < len; ++i) {
-
-			    followed_usernames.push(results[i]["followed"]);
-
-			}
-			
-		    });
-
-
-		    connection.end( function(error) {
-
-			json_array =[]
-
-			for (let i = 0, len = followed_usernames.length; i < len; ++i){
-
-			    json_array.push({ "id" : (i+1), "username" : followed_usernames[i]});
-
-			}
-
-			response.write(JSON.stringify(json_array));
-			
-			response.end();	    
-		    
-		    });
-
-
-
-
-
+		    database : 'nplat',
+		    port : '3306',
 		});
-	})
+		
+		connection.connect();
+		
+		followed_usernames = [];
+		
+		connection.query('select followed from follows where follower="'+username+'";',function (error, results, fields) {
+		    
+		    for (let i = 0, len = results.length; i < len; ++i) {
+			
+			followed_usernames.push(results[i]["followed"]);
+			
+		    }
+		    
+		});
+		
+		
+		connection.end( function(error) {
+		    
+		    json_array =[]
+		    
+		    for (let i = 0, len = followed_usernames.length; i < len; ++i){
+			
+			json_array.push({ "id" : (i+1), "username" : followed_usernames[i]});
+			
+		    }
+		    
+		    response.write(JSON.stringify(json_array));
+		    
+		    response.end();	    
+		    
+		});
+	    });
+    })
 });        
 
 const server = https.createServer(options, app);
