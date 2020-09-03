@@ -300,17 +300,17 @@ app.post('/repost',function (request, response) {
 	
 	const id_token = JSON.parse(decodeURIComponent(body))["id_token"];
 	
-	const orignal_message = JSON.parse(decodeURIComponent(body))["message"];
+	const post_id = JSON.parse(decodeURIComponent(body))["post_id"];
 
-	const original_username = JSON.parse(decodeURIComponent(body))["username"];
+	if (id_token == undefined || post_id == undefined) {
 
-	const original_time = JSON.parse(decodeURIComponent(body))["time"];
-
-	const original_unique_id = JSON.parse(decodeURIComponent(body))["unique_id"];
-
-	const original_video_unique_id = JSON.parse(decodeURIComponent(body))["video_unique_id"];
-
-	const original_image_unique_id = JSON.parse(decodeURIComponent(body))["image_unique_id"];				
+	    json_object = {"success" : false, "reason" : "id_token == undefined || post_id == undefined"};
+	    response.write(JSON.stringify(json_object));
+	    response.end();
+	    console.log("id_token == undefined || post_id == undefined");
+	    return;
+	    
+	}
 
 	admin.auth().verifyIdToken(id_token)
 	    .then(function(decodedToken) {
@@ -328,7 +328,7 @@ app.post('/repost',function (request, response) {
 		
 		var now = new Date();
 		
-		connection.query('insert into posts set username="'+username+'", parent_unique_id="'+original_unique_id+'", parent_username="'+original_username+'", parent_text="'+orignal_message+'", parent_time="'+original_time+'",time = "'+now.toISOString()+'";',function (error, results, fields) {
+		connection.query('insert into posts set username="'+username+'", parent_unique_id="'+post_id+'",time = "'+now.toISOString()+'";',function (error, results, fields) {
 		    json_object = {"success" : true, "reason" : ""}
 		    response.write(JSON.stringify(json_object));
 		    response.end();
