@@ -720,7 +720,7 @@ app.post('/posts',function (request, response) {
 			posts_parent_timestamp.push(results[i]["(select time from posts where unique_id=t1.parent_unique_id limit 1)"]);
 			posts_parent_imageids.push(results[i]["(select image_unique_id from posts where unique_id=t1.parent_unique_id limit 1)"]);
 			posts_parent_videoids.push(results[i]["(select video_unique_id from posts where unique_id=t1.parent_unique_id limit 1)"]);
-			posts_parent_uniqueids.push(results[i]["(select count(*) from posts where parent_unique_id=t1.unique_id)"]);
+			posts_parent_uniqueids.push(results[i]["parent_unique_id"]);
 			posts_nloves.push(results[i]["(select count(*) from loves where post_unique_id=unique_id)"]);
 			posts_nreposts.push(results[i]["(select count(*) from posts where parent_unique_id=unique_id)"]);
 			
