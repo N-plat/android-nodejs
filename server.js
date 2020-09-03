@@ -684,7 +684,7 @@ app.post('/posts',function (request, response) {
 		    posts_parent_videoids = [];
 		    posts_parent_uniqueids = [];		    
 		    
-		    connection.query('select *,(select count(*) from loves where post_unique_id=unique_id) from posts where username="'+username+'";',function (error, results, fields) {
+		    connection.query('select t1.*,(select unique_id from posts where unique_id=t1.parent_unique_id limit 1),(select text from posts where unique_id=t1.parent_unique_id limit 1),(select video_unique_id from posts where unique_id=t1.parent_unique_id limit 1),(select image_unique_id from posts where unique_id=t1.parent_unique_id limit 1),(select time from posts where unique_id=t1.parent_unique_id limit 1),(select username from posts where unique_id=t1.parent_unique_id limit 1),(select count(*) from loves where post_unique_id=t1.unique_id),(select count(*) from posts where parent_unique_id=t1.unique_id),(select count(*) from loves where post_unique_id=t1.parent_unique_id),(select count(*) from posts where parent_unique_id=t1.parent_unique_id) FROM posts as t1 WHERE t1.username="'+username+'";',function (error, results, fields) {
 
 			for (let i = 0, len = results.length; i < len; ++i) {
 
@@ -693,12 +693,12 @@ app.post('/posts',function (request, response) {
 			    posts_imageids.push(results[i]["image_unique_id"]);
 			    posts_videoids.push(results[i]["video_unique_id"]);
 			    posts_uniqueids.push(results[i]["unique_id"]);
-			    posts_parent_text.push(results[i]["parent_text"]);
-			    posts_parent_username.push(results[i]["parent_username"]);
-			    posts_parent_timestamp.push(results[i]["parent_time"]);
-			    posts_parent_imageids.push(results[i]["parent_image_unique_id"]);
-			    posts_parent_videoids.push(results[i]["parent_video_unique_id"]);
-			    posts_parent_uniqueids.push(results[i]["parent_unique_id"]);			    			    
+			    posts_parent_text.push(results[i]["(select text from posts where unique_id=t1.parent_unique_id limit 1)"]);
+			    posts_parent_username.push(results[i]["(select username from posts where unique_id=t1.parent_unique_id limit 1)"]);
+			    posts_parent_timestamp.push(results[i]["(select time from posts where unique_id=t1.parent_unique_id limit 1)"]);
+			    posts_parent_imageids.push(results[i]["(select image_unique_id from posts where unique_id=t1.parent_unique_id limit 1)"]);
+			    posts_parent_videoids.push(results[i]["(select video_unique_id from posts where unique_id=t1.parent_unique_id limit 1)"]);
+			    posts_parent_uniqueids.push(results[i]["(select count(*) from posts where parent_unique_id=t1.unique_id)"]);
 			    posts_nloves.push(results[i]["(select count(*) from loves where post_unique_id=unique_id)"]);
 			    posts_nreposts.push(results[i]["(select count(*) from posts where parent_unique_id=unique_id)"]);
 
@@ -770,9 +770,8 @@ app.post('/feed',function (request, response) {
 		    posts_parent_imageids = []
 		    posts_parent_videoids = [];
 		    posts_parent_uniqueids = [];
-		    
 
-                    connection.query('select t1.*,(select count(*) from loves where post_unique_id=t1.unique_id),(select count(*) from posts where parent_unique_id=t1.unique_id) FROM posts as t1, follows as t2 where t1.username = t2.followed && t2.follower="'+username+'";',function (error, results, fields) {
+                    connection.query('select t1.*,(select unique_id from posts where unique_id=t1.parent_unique_id limit 1),(select text from posts where unique_id=t1.parent_unique_id limit 1),(select video_unique_id from posts where unique_id=t1.parent_unique_id limit 1),(select image_unique_id from posts where unique_id=t1.parent_unique_id limit 1),(select time from posts where unique_id=t1.parent_unique_id limit 1),(select username from posts where unique_id=t1.parent_unique_id limit 1),(select count(*) from loves where post_unique_id=t1.unique_id),(select count(*) from posts where parent_unique_id=t1.unique_id),(select count(*) from loves where post_unique_id=t1.parent_unique_id),(select count(*) from posts where parent_unique_id=t1.parent_unique_id) FROM posts as t1, follows as t2 where t1.username = t2.followed && t2.follower="'+username+'";',function (error, results, fields) {
 
 			for (let i = 0, len = results.length; i < len; ++i) {
 
@@ -782,11 +781,11 @@ app.post('/feed',function (request, response) {
 			    posts_imageids.push(results[i]["image_unique_id"]);
 			    posts_videoids.push(results[i]["video_unique_id"]);
 			    posts_uniqueids.push(results[i]["unique_id"]);
-			    posts_parent_text.push(results[i]["parent_text"]);
-			    posts_parent_username.push(results[i]["parent_username"]);
-			    posts_parent_timestamp.push(results[i]["parent_time"]);
-			    posts_parent_imageids.push(results[i]["parent_image_unique_id"]);
-			    posts_parent_videoids.push(results[i]["parent_video_unique_id"]);
+			    posts_parent_text.push(results[i]["(select text from posts where unique_id=t1.parent_unique_id limit 1)"]);
+			    posts_parent_username.push(results[i]["(select username from posts where unique_id=t1.parent_unique_id limit 1)"]);
+			    posts_parent_timestamp.push(results[i]["(select time from posts where unique_id=t1.parent_unique_id limit 1)"]);
+			    posts_parent_imageids.push(results[i]["(select image_unique_id from posts where unique_id=t1.parent_unique_id limit 1)"]);
+			    posts_parent_videoids.push(results[i]["(select video_unique_id from posts where unique_id=t1.parent_unique_id limit 1)"]);
 			    posts_parent_uniqueids.push(results[i]["parent_unique_id"]);			    
 			    posts_nloves.push(results[i]["(select count(*) from loves where post_unique_id=t1.unique_id)"]);
 			    posts_nreposts.push(results[i]["(select count(*) from posts where parent_unique_id=t1.unique_id)"]);
